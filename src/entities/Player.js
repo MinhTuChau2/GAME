@@ -2,22 +2,61 @@ import { DIAGONAL_FACTOR } from "../constants";
 import { store, environmentAtom, mentalAtom, moneyAtom, dayAtom } from "../store";
 
 export default function makePlayer(k, posVec2, speed) {
-const player = k.add([
-  k.sprite("player", { anim: "walk-down-idle" }),
-  k.scale(5),
-  k.anchor("center"),
-  k.area({ shape: new k.Rect(k.vec2(0), 5, 10) }),
-  k.body(),
-  k.pos(posVec2),
-  "player",
-  {
-    locked: false,
-    lockedBy: null,
-    exitPos: null,
-    direction: k.vec2(0, 0),
-    directionName: "walk-down",
-  },
-]);
+  // ---------------------
+  // PLAYER
+  // ---------------------
+  const player = k.add([
+    k.sprite("player", { anim: "walk-down-idle" }),
+    k.scale(5),
+    k.anchor("center"),
+    k.area({ shape: new k.Rect(k.vec2(0), 5, 10) }),
+    k.body(),
+    k.pos(posVec2),
+    "player",
+    {
+      locked: false,
+      lockedBy: null,
+      exitPos: null,
+      direction: k.vec2(0, 0),
+      directionName: "walk-down",
+    },
+  ]);
+
+  // ---------------------
+  // OUTFITS
+  // ---------------------
+  const outfits = [
+    "outfit1", // Handmade
+    "outfit2", // Second hand
+    "outfit3", // Local brands
+    "outfit4", // Fast fashion
+    "outfit5", // Vintage
+  ];
+
+  player.currentOutfitIndex = -1; // -1 = no outfit
+
+  
+  // Change outfit (cycle)
+  player.changeOutfit = (outfitId) => {
+  // Remove existing outfit safely
+  if (player.outfit) {
+    player.outfit.destroy();
+    player.outfit = null;
+  }
+
+  // 👕 "No outfit" option → STOP HERE
+  if (!outfitId || outfitId === "none") {
+    return;
+  }
+
+  // ✅ Create new outfit sprite (layered on player)
+  player.outfit = player.add([
+    k.sprite(outfitId, {
+      anim: `${player.directionName}-idle`,
+    }),
+    k.anchor("center"),
+  ]);
+};
 
 
   // ---------------------
@@ -36,37 +75,39 @@ const player = k.add([
     game.addEventListener(evt, () => setMouseDown(false))
   );
 
-  // 🖱️ CLICK TO UNLOCK
+  // ---------------------
+  // CLICK (UNLOCK / CLOSET)
+  // ---------------------
   k.onClick(() => {
-  if (!player.locked) return;
-   
-  if (player.lockTimer) {
-  clearInterval(player.lockTimer);
-  player.lockTimer = null;
-}
+    // Closet mode → change outfit
+    if (player.inCloset) {
+      player.changeOutfit();
+      return;
+    }
 
-  player.locked = false;
-  player.lockedBy = null;
+    if (!player.locked) return;
 
-  // Restore physics
-  player.isStatic = false;
-  player.area.collisionIgnore = [];
+    if (player.lockTimer) {
+      clearInterval(player.lockTimer);
+      player.lockTimer = null;
+    }
 
-  // Push player outside
-  if (player.exitPos) {
-    const exitDir = player.exitPos.sub(player.pos).unit();
-    player.pos = player.exitPos.add(exitDir.scale(10));
-  }
+    player.locked = false;
+    player.lockedBy = null;
 
-  player.exitPos = null;
-});
+    player.isStatic = false;
+    player.area.collisionIgnore = [];
 
+    if (player.exitPos) {
+      const exitDir = player.exitPos.sub(player.pos).unit();
+      player.pos = player.exitPos.add(exitDir.scale(10));
+    }
 
-
-
+    player.exitPos = null;
+  });
 
   // ---------------------
-  // CAMERA SETTINGS
+  // CAMERA
   // ---------------------
   const CAMERA_ZOOM = 1;
   const CAMERA_LERP = 0.12;
@@ -78,25 +119,56 @@ const player = k.add([
   const WORLD_WIDTH = 1920;
   const WORLD_HEIGHT = 1080;
 
-  // Debug world boundaries
-  k.add([k.rect(WORLD_WIDTH, 5), k.pos(0, 0), k.color(255, 0, 0)]);
-  k.add([k.rect(WORLD_WIDTH, 5), k.pos(0, WORLD_HEIGHT - 5), k.color(255, 0, 0)]);
-  k.add([k.rect(5, WORLD_HEIGHT), k.pos(0, 0), k.color(255, 0, 0)]);
-  k.add([k.rect(5, WORLD_HEIGHT), k.pos(WORLD_WIDTH - 5, 0), k.color(255, 0, 0)]);
+  k.add([k.rect(WORLD_WIDTH, 5), k.pos(0, 0)]);
+  k.add([k.rect(WORLD_WIDTH, 5), k.pos(0, WORLD_HEIGHT - 5)]);
+  k.add([k.rect(5, WORLD_HEIGHT), k.pos(0, 0)]);
+  k.add([k.rect(5, WORLD_HEIGHT), k.pos(WORLD_WIDTH - 5, 0)]);
 
   // ---------------------
   // UPDATE LOOP
   // ---------------------
-  player.onUpdate(() => {
-    // 🔒 BLOCK ALL MOVEMENT IF LOCKED
-    if (player.locked) {
-      player.direction = k.vec2(0, 0);
-      player.play(`${player.directionName}-idle`);
-      return;
+ player.onUpdate(() => {
+  // ---------------------
+  // 🧥 CLOSET OPEN → FULL LOCK
+  // ---------------------
+  if (player.inCloset) {
+    player.direction = k.vec2(0, 0);
+
+    const idle = `${player.directionName}-idle`;
+
+    if (player.getCurAnim()?.name !== idle) {
+      player.play(idle);
     }
 
+    if (player.outfit && player.outfit.getCurAnim()?.name !== idle) {
+      player.outfit.play(idle);
+    }
+
+    return; // 🚨 STOP EVERYTHING
+  }
+
+  // ---------------------
+  // 🔒 LOCKED BY OBJECT
+  // ---------------------
+  if (player.locked) {
+    player.direction = k.vec2(0, 0);
+
+    const idle = `${player.directionName}-idle`;
+
+    if (player.getCurAnim()?.name !== idle) {
+      player.play(idle);
+    }
+
+    if (player.outfit && player.outfit.getCurAnim()?.name !== idle) {
+      player.outfit.play(idle);
+    }
+
+    return;
+  }
+
+
     // ---------------------
-    // PLAYER MOVEMENT
+    // MOVEMENT
     // ---------------------
     player.direction = k.vec2(0, 0);
     const worldMousePos = k.toWorld(k.mousePos());
@@ -108,7 +180,6 @@ const player = k.add([
     const dx = player.direction.x;
     const dy = player.direction.y;
 
-    // Direction → animation
     if (dx > 0 && Math.abs(dy) < 0.5) player.directionName = "walk-right";
     else if (dx < 0 && Math.abs(dy) < 0.5) player.directionName = "walk-left";
     else if (dy < -0.8) player.directionName = "walk-up";
@@ -119,36 +190,32 @@ const player = k.add([
     else if (dx > 0 && dy > 0.5) player.directionName = "walk-right-down";
 
     if (player.direction.eq(k.vec2(0, 0))) {
-      if (!player.getCurAnim().name.includes("idle")) {
-        player.play(`${player.directionName}-idle`);
+      const idle = `${player.directionName}-idle`;
+      if (!player.getCurAnim()?.name.includes("idle")) {
+        player.play(idle);
+        if (player.outfit) player.outfit.play(idle);
       }
-    } else if (player.getCurAnim().name !== player.directionName) {
+    } else if (player.getCurAnim()?.name !== player.directionName) {
       player.play(player.directionName);
+      if (player.outfit) player.outfit.play(player.directionName);
     }
 
-    // Move
     const moveSpeed = dx && dy ? DIAGONAL_FACTOR * speed : speed;
     player.move(player.direction.scale(moveSpeed));
 
-    // ---------------------
-    // CLAMP TO WORLD
-    // ---------------------
+    // Clamp
     const halfW = player.width / 2;
     const halfH = player.height / 2;
 
     player.pos.x = Math.max(halfW, Math.min(WORLD_WIDTH - halfW, player.pos.x));
     player.pos.y = Math.max(halfH, Math.min(WORLD_HEIGHT - halfH, player.pos.y));
 
-    // ---------------------
-    // CAMERA FOLLOW
-    // ---------------------
-    const camTarget = player.pos;
-    const camCurrent = k.camPos();
-    k.camPos(camCurrent.lerp(camTarget, CAMERA_LERP));
+    // Camera
+    k.camPos(k.camPos().lerp(player.pos, CAMERA_LERP));
   });
 
   // ---------------------
-  // INTERACTIONS (OPTIONAL)
+  // INTERACTIONS
   // ---------------------
   player.interact = (objectTag) => {
     switch (objectTag) {
@@ -167,6 +234,11 @@ const player = k.add([
 
       case "exitDoor":
         k.go("house");
+        break;
+
+      case "closet":
+        player.inCloset = true;
+        console.log("Closet opened — click to change outfit");
         break;
     }
   };
