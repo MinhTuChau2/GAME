@@ -280,6 +280,9 @@ export default async function initGame(kaplayCtx) {
   k.loadSprite("meditate", "./sprites/meditate.png");
   k.loadSprite("closet", "./sprites/Closet.png");
   k.loadSprite("books", "./sprites/Books.png");
+  k.loadSprite("plant1", "./sprites/plant1.png");
+  k.loadSprite("plant2", "./sprites/plant2.png");
+  k.loadSprite("plant3", "./sprites/plant3.png");
 
   // --- SHADER BACKGROUND (BEHIND EVERYTHING) ---
   k.loadShaderURL("tiledPattern", null, "/shaders/tiledPattern.frag");
@@ -324,6 +327,9 @@ const sections = [
   { pos: k.vec2(WORLD_WIDTH / 2 - 770, WORLD_HEIGHT / 2 + 270), name: "Meditate", sprite: "meditate" },
   { pos: k.vec2(WORLD_WIDTH / 2 - 100, WORLD_HEIGHT / 2 - 390), name: "Closet", sprite: "closet" },
   { pos: k.vec2(WORLD_WIDTH / 2 + 700, WORLD_HEIGHT / 2 - 420), name: "Books", sprite: "books" },
+    { pos: k.vec2(WORLD_WIDTH / 2 + 470, WORLD_HEIGHT / 2 - 420), name: "Plant1", sprite: "plant1" },
+    { pos: k.vec2(WORLD_WIDTH / 2 - 600 , WORLD_HEIGHT / 2 - 450), name: "Plant2", sprite: "plant2" },
+    { pos: k.vec2(WORLD_WIDTH / 2 - 900, WORLD_HEIGHT / 2 - 60), name: "Plant3", sprite: "plant3" },
 ];
 
 sections.forEach((s) => {
