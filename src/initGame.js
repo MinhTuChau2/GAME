@@ -27,6 +27,19 @@ const outfits = [
   },
 ];
 
+// ---------------------
+// ⏳ EARTH DEGRADATION
+// ---------------------
+setInterval(() => {
+  const current = store.get(environmentAtom);
+
+  // Decrease ~1% per minute
+const BASE_DECAY = 0.0001;
+  store.set(environmentAtom, Math.max(0, current - BASE_DECAY));
+
+  console.log("🌍 Earth health:", store.get(environmentAtom));
+}, 1000);
+
 
 function openClosetPopup(k, player) {
   player.locked = true;
@@ -132,6 +145,52 @@ export default async function initGame(kaplayCtx) {
 
   const k = makeKaplayCtx();
   console.log("Game initialized with kaplay context and store:", kaplayCtx, store);
+
+ // ---------------------
+// 🌍 EARTH HEALTH BAR (TOP RIGHT)
+// ---------------------
+const BAR_WIDTH = 220;
+const BAR_HEIGHT = 18;
+const PADDING = 20;
+
+// Background
+const earthBarBg = k.add([
+  k.rect(BAR_WIDTH, BAR_HEIGHT, { radius: 6 }),
+  k.pos(k.width() - BAR_WIDTH - PADDING, PADDING),
+  k.color(40, 40, 40),
+  k.fixed(),
+  k.z(100),
+]);
+
+// Fill
+const earthBarFill = k.add([
+  k.rect(BAR_WIDTH, BAR_HEIGHT, { radius: 6 }),
+  k.pos(k.width() - BAR_WIDTH - PADDING, PADDING),
+  k.color(80, 200, 120),
+  k.fixed(),
+  k.z(101),
+]);
+
+// Label
+const earthLabel = k.add([
+  k.text("Earth Health", { size: 14 }),
+  k.pos(k.width() - BAR_WIDTH - PADDING, PADDING - 16),
+  k.color(255, 255, 255),
+  k.fixed(),
+  k.z(102),
+]);
+
+
+earthBarFill.onUpdate(() => {
+  const value = store.get(environmentAtom); // OR earthAtom if you prefer
+  earthBarFill.width = BAR_WIDTH * Math.max(0, value);
+
+  // Color shift based on health
+  if (value > 0.6) earthBarFill.color = k.rgb(80, 200, 120);
+  else if (value > 0.3) earthBarFill.color = k.rgb(230, 200, 80);
+  else earthBarFill.color = k.rgb(220, 80, 80);
+});
+
 
   // --- LOAD PLAYER SPRITE ---
   k.loadSprite("player", "./sprites/player.png", {
@@ -327,9 +386,9 @@ const sections = [
   { pos: k.vec2(WORLD_WIDTH / 2 - 770, WORLD_HEIGHT / 2 + 270), name: "Meditate", sprite: "meditate" },
   { pos: k.vec2(WORLD_WIDTH / 2 - 100, WORLD_HEIGHT / 2 - 390), name: "Closet", sprite: "closet" },
   { pos: k.vec2(WORLD_WIDTH / 2 + 700, WORLD_HEIGHT / 2 - 420), name: "Books", sprite: "books" },
-    { pos: k.vec2(WORLD_WIDTH / 2 + 470, WORLD_HEIGHT / 2 - 420), name: "Plant1", sprite: "plant1" },
+    { pos: k.vec2(WORLD_WIDTH / 2 + 490, WORLD_HEIGHT / 2 - 420), name: "Plant1", sprite: "plant1" },
     { pos: k.vec2(WORLD_WIDTH / 2 - 600 , WORLD_HEIGHT / 2 - 450), name: "Plant2", sprite: "plant2" },
-    { pos: k.vec2(WORLD_WIDTH / 2 - 900, WORLD_HEIGHT / 2 - 60), name: "Plant3", sprite: "plant3" },
+    { pos: k.vec2(WORLD_WIDTH / 2 - 850, WORLD_HEIGHT / 2 - 60), name: "Plant3", sprite: "plant3" },
 ];
 
 sections.forEach((s) => {
@@ -401,6 +460,10 @@ sections.forEach((s) => {
 });
 
 
+if (store.get(environmentAtom) <= 0) {
+  console.log("💀 Earth collapsed");
+  // k.go("gameover") later
+}
 
   // --- PLAYER ---
   const player = makePlayer(k, k.vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2), 700);

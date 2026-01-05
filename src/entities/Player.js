@@ -1,4 +1,4 @@
-import { DIAGONAL_FACTOR } from "../constants";
+import { DIAGONAL_FACTOR, OUTFIT_DECAY_MODIFIER } from "../constants";
 import { store, environmentAtom, mentalAtom, moneyAtom, dayAtom } from "../store";
 
 export default function makePlayer(k, posVec2, speed) {
@@ -19,6 +19,7 @@ export default function makePlayer(k, posVec2, speed) {
       exitPos: null,
       direction: k.vec2(0, 0),
       directionName: "walk-down",
+      currentOutfitId: "none",
     },
   ]);
 
@@ -37,19 +38,20 @@ export default function makePlayer(k, posVec2, speed) {
 
   
   // Change outfit (cycle)
-  player.changeOutfit = (outfitId) => {
+ player.changeOutfit = (outfitId) => {
   // Remove existing outfit safely
   if (player.outfit) {
     player.outfit.destroy();
     player.outfit = null;
   }
 
-  // 👕 "No outfit" option → STOP HERE
-  if (!outfitId || outfitId === "none") {
-    return;
-  }
+  // 👕 Save current outfit (USED BY EARTH DECAY)
+  player.currentOutfitId = outfitId ?? "none";
 
-  // ✅ Create new outfit sprite (layered on player)
+  // No outfit selected
+  if (!outfitId || outfitId === "none") return;
+
+  // Create new outfit sprite
   player.outfit = player.add([
     k.sprite(outfitId, {
       anim: `${player.directionName}-idle`,
@@ -81,9 +83,9 @@ export default function makePlayer(k, posVec2, speed) {
   k.onClick(() => {
     // Closet mode → change outfit
     if (player.inCloset) {
-      player.changeOutfit();
-      return;
-    }
+  return; // outfit selection handled by popup UI
+}
+
 
     if (!player.locked) return;
 
@@ -242,6 +244,27 @@ export default function makePlayer(k, posVec2, speed) {
         break;
     }
   };
+// ---------------------
+// 🌍 EARTH HEALTH DECAY
+// ---------------------
+
+const BASE_DECAY = 0.0001;
+setInterval(() => {
+  const current = store.get(environmentAtom);
+
+  const outfitId = player.currentOutfitId ?? "none";
+  const modifier = OUTFIT_DECAY_MODIFIER[outfitId] ?? 1;
+
+  const decayAmount = BASE_DECAY * modifier;
+  const newValue = Math.max(0, current - decayAmount);
+
+  console.log(
+    `[EARTH DECAY] Outfit: ${outfitId} | Modifier: x${modifier} | -${decayAmount.toFixed(6)} | New Health: ${newValue.toFixed(3)}`
+  );
+
+  store.set(environmentAtom, newValue);
+}, 1000);
+
 
   return player;
 }
