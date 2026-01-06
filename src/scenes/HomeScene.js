@@ -3,19 +3,6 @@ import { PALETTE } from "../constants";
 import makeSection from "../components/Section";
 import { store, environmentAtom, mentalAtom, moneyAtom, dayAtom } from "../store";
 
-// ---------------------
-//  EARTH DEGRADATION
-// ---------------------
-setInterval(() => {
-  const current = store.get(environmentAtom);
-
-  // Decrease ~1% per minute
-const BASE_DECAY = 0.0001;
-  store.set(environmentAtom, Math.max(0, current - BASE_DECAY));
-
-  console.log("🌍 Earth health:", store.get(environmentAtom));
-}, 1000);
-
 
 function openClosetPopup(k, player) {
   player.locked = true;
@@ -119,53 +106,11 @@ export default function HomeScene(k) {
 
   const WORLD_WIDTH = 1920;
   const WORLD_HEIGHT = 1080;
-  // ---------------------
-// 🌍 EARTH HEALTH BAR (TOP RIGHT)
-// ---------------------
-const BAR_WIDTH = 220;
-const BAR_HEIGHT = 18;
-const PADDING = 20;
-
-// Background
-const earthBarBg = k.add([
-  k.rect(BAR_WIDTH, BAR_HEIGHT, { radius: 6 }),
-  k.pos(k.width() - BAR_WIDTH - PADDING, PADDING),
-  k.color(40, 40, 40),
-  k.fixed(),
-  k.z(100),
-]);
-
-// Fill
-const earthBarFill = k.add([
-  k.rect(BAR_WIDTH, BAR_HEIGHT, { radius: 6 }),
-  k.pos(k.width() - BAR_WIDTH - PADDING, PADDING),
-  k.color(80, 200, 120),
-  k.fixed(),
-  k.z(101),
-]);
-
-// Label
-const earthLabel = k.add([
-  k.text("Earth Health", { size: 14 }),
-  k.pos(k.width() - BAR_WIDTH - PADDING, PADDING - 16),
-  k.color(255, 255, 255),
-  k.fixed(),
-  k.z(102),
-]);
-
-
-earthBarFill.onUpdate(() => {
-  const value = store.get(environmentAtom); // OR earthAtom if you prefer
-  earthBarFill.width = BAR_WIDTH * Math.max(0, value);
-
-  // Color shift based on health
-  if (value > 0.6) earthBarFill.color = k.rgb(80, 200, 120);
-  else if (value > 0.3) earthBarFill.color = k.rgb(230, 200, 80);
-  else earthBarFill.color = k.rgb(220, 80, 80);
-});
+  
 
 
   // --- LOAD PLAYER SPRITE ---
+  
   k.loadSprite("player", "./sprites/player.png", {
     sliceX: 4,
     sliceY: 8,
@@ -315,6 +260,7 @@ earthBarFill.onUpdate(() => {
   k.loadSprite("plant1", "./sprites/plant1.png");
   k.loadSprite("plant2", "./sprites/plant2.png");
   k.loadSprite("plant3", "./sprites/plant3.png");
+  k.loadSprite("door", "./sprites/door.png");
 
   // --- SHADER BACKGROUND (BEHIND EVERYTHING) ---
   k.loadShaderURL("tiledPattern", null, "/shaders/tiledPattern.frag");
@@ -362,6 +308,7 @@ const sections = [
     { pos: k.vec2(WORLD_WIDTH / 2 + 490, WORLD_HEIGHT / 2 - 420), name: "Plant1", sprite: "plant1" },
     { pos: k.vec2(WORLD_WIDTH / 2 - 600 , WORLD_HEIGHT / 2 - 450), name: "Plant2", sprite: "plant2" },
     { pos: k.vec2(WORLD_WIDTH / 2 - 850, WORLD_HEIGHT / 2 - 60), name: "Plant3", sprite: "plant3" },
+     { pos: k.vec2(WORLD_WIDTH / 2 + 960, WORLD_HEIGHT / 2 + 420), name: "ExitDoor", sprite: "door" },
 ];
 
 sections.forEach((s) => {
@@ -423,6 +370,10 @@ sections.forEach((s) => {
   openClosetPopup(k, player);
   console.log("Closet opened — choose an outfit");
 }
+else if (s.name === "ExitDoor") {
+  console.log("🚪 Leaving home → outside");
+  k.go("outside");
+}
 
 
     else {
@@ -440,4 +391,5 @@ if (store.get(environmentAtom) <= 0) {
 
   // --- PLAYER ---
   const player = makePlayer(k, k.vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2), 700);
+    return player;
 }

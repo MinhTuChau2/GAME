@@ -244,26 +244,6 @@ export default function makePlayer(k, posVec2, speed) {
         break;
     }
   };
-// ---------------------
-// 🌍 EARTH HEALTH DECAY
-// ---------------------
-
-const BASE_DECAY = 0.0001;
-setInterval(() => {
-  const current = store.get(environmentAtom);
-
-  const outfitId = player.currentOutfitId ?? "none";
-  const modifier = OUTFIT_DECAY_MODIFIER[outfitId] ?? 1;
-
-  const decayAmount = BASE_DECAY * modifier;
-  const newValue = Math.max(0, current - decayAmount);
-
-  console.log(
-    `[EARTH DECAY] Outfit: ${outfitId} | Modifier: x${modifier} | -${decayAmount.toFixed(6)} | New Health: ${newValue.toFixed(3)}`
-  );
-
-  store.set(environmentAtom, newValue);
-}, 1000);
 
 
   return player;
