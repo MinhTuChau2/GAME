@@ -1,4 +1,6 @@
 # React + Vite
+├── jotai@2.10.0
+├── kaplay@3001.0.19
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
