@@ -4,15 +4,15 @@ import { OUTFIT_DECAY_MODIFIER } from "../constants";
 let started = false;
 
 export default function startEarthDecay(getPlayer) {
-  if (started) return; // 🚨 prevent duplicate timers
+  if (started) return; //  prevent duplicate timers
   started = true;
 
-  const BASE_DECAY = 0.01;
+  const BASE_DECAY = 0.001;
 
   setInterval(() => {
     const current = store.get(environmentAtom);
 
-    const player = getPlayer?.(); // ✅ ALWAYS current player
+    const player = getPlayer?.(); //  ALWAYS current player
     const outfitId = player?.currentOutfitId ?? "none";
     const modifier = OUTFIT_DECAY_MODIFIER[outfitId] ?? 1;
 
