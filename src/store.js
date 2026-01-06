@@ -7,6 +7,7 @@ export const moneyAtom = atom(0);
 export const dayAtom = atom(1);
 export const earthAtom = atom(1);
 
+export const outfitAtom = atom("none");
 
 
 export const cameraZoomValueAtom = atom(1);

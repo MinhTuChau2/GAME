@@ -1,5 +1,5 @@
 import { DIAGONAL_FACTOR, OUTFIT_DECAY_MODIFIER } from "../constants";
-import { store, environmentAtom, mentalAtom, moneyAtom, dayAtom } from "../store";
+import { store, environmentAtom, mentalAtom, moneyAtom, dayAtom, outfitAtom } from "../store";
 
 export default function makePlayer(k, posVec2, speed) {
   // ---------------------
@@ -22,7 +22,7 @@ export default function makePlayer(k, posVec2, speed) {
       currentOutfitId: "none",
     },
   ]);
-
+ 
   // ---------------------
   // OUTFITS
   // ---------------------
@@ -37,28 +37,31 @@ export default function makePlayer(k, posVec2, speed) {
   player.currentOutfitIndex = -1; // -1 = no outfit
 
   
-  // Change outfit (cycle)
- player.changeOutfit = (outfitId) => {
-  // Remove existing outfit safely
+player.changeOutfit = (outfitId) => {
+  const id = outfitId ?? "none";
+
+  // 🔁 GLOBAL STATE (single source of truth)
+  store.set(outfitAtom, id);
+
+  // 🔁 LOCAL STATE (used by decay)
+  player.currentOutfitId = id;
+
   if (player.outfit) {
     player.outfit.destroy();
     player.outfit = null;
   }
 
-  // 👕 Save current outfit (USED BY EARTH DECAY)
-  player.currentOutfitId = outfitId ?? "none";
+  if (id === "none") return;
 
-  // No outfit selected
-  if (!outfitId || outfitId === "none") return;
-
-  // Create new outfit sprite
   player.outfit = player.add([
-    k.sprite(outfitId, {
+    k.sprite(id, {
       anim: `${player.directionName}-idle`,
     }),
     k.anchor("center"),
   ]);
 };
+
+
 
 
   // ---------------------
@@ -244,7 +247,14 @@ export default function makePlayer(k, posVec2, speed) {
         break;
     }
   };
+// 🔁 Restore outfit on scene load
+const savedOutfit = store.get(outfitAtom);
 
+if (savedOutfit && savedOutfit !== "none") {
+  player.changeOutfit(savedOutfit);
+}
 
   return player;
+
+  
 }

@@ -100,7 +100,7 @@ function openClosetPopup(k, player) {
 }
 
 
-export default function HomeScene(k) {
+export default function HomeScene(k, player) {
   // EVERYTHING you currently have inside initGame
   // except makeKaplayCtx()
 
@@ -390,6 +390,10 @@ if (store.get(environmentAtom) <= 0) {
 }
 
   // --- PLAYER ---
-  const player = makePlayer(k, k.vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2), 700);
-    return player;
+ // const player = makePlayer(k, k.vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2), 700);
+    //return player;
+    // --- PLAYER (reuse existing one) ---
+player.pos = k.vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
+k.add(player);
+
 }

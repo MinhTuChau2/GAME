@@ -1,10 +1,10 @@
-import { store, environmentAtom } from "../store";
+import { store, environmentAtom, outfitAtom } from "../store";
 import { OUTFIT_DECAY_MODIFIER } from "../constants";
 
 let started = false;
 
-export default function startEarthDecay(getPlayer) {
-  if (started) return; //  prevent duplicate timers
+export default function startEarthDecay() {
+  if (started) return;
   started = true;
 
   const BASE_DECAY = 0.001;
@@ -12,8 +12,8 @@ export default function startEarthDecay(getPlayer) {
   setInterval(() => {
     const current = store.get(environmentAtom);
 
-    const player = getPlayer?.(); //  ALWAYS current player
-    const outfitId = player?.currentOutfitId ?? "none";
+    // 🌍 Single source of truth
+    const outfitId = store.get(outfitAtom) ?? "none";
     const modifier = OUTFIT_DECAY_MODIFIER[outfitId] ?? 1;
 
     const decayAmount = BASE_DECAY * modifier;

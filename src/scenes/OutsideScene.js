@@ -1,29 +1,33 @@
-// src/scenes/OutsideScene.js
 import makePlayer from "../entities/Player";
-import { store, environmentAtom } from "../store";
+import { PALETTE } from "../constants";
+import makeSection from "../components/Section";
+import { store, environmentAtom, mentalAtom, moneyAtom, dayAtom } from "../store";
 
-export default function OutsideScene(k) {
+export default function OutsideScene(k, player) {
+  if (!player) {
+    console.error("❌ Player is undefined in OutsideScene!");
+    return;
+  }
+
   const WORLD_WIDTH = 1920;
   const WORLD_HEIGHT = 1080;
+
+  // Move player to outside spawn
+
+  // Ensure the outfit is correct
+  if (player.currentOutfitId && player.currentOutfitId !== "none") {
+    player.changeOutfit(player.currentOutfitId);
+  }
 
   // Background
   k.add([
     k.rect(WORLD_WIDTH, WORLD_HEIGHT),
     k.pos(0, 0),
-    k.color(90, 160, 90), // green outside
+    k.color(90, 160, 90),
   ]);
-
-
-
-  // Player spawn
- const player = makePlayer(
-  k,
-  k.vec2(WORLD_WIDTH / 2, WORLD_HEIGHT - 350), // ⬆ farther away
-  700
-);
-
-
-  // Door back to home
+  player.pos = k.vec2(WORLD_WIDTH / 2, WORLD_HEIGHT - 350);
+k.add(player);
+  // Door back home
   const door = k.add([
     k.rect(120, 180),
     k.pos(WORLD_WIDTH / 2, WORLD_HEIGHT - 100),
@@ -41,17 +45,13 @@ export default function OutsideScene(k) {
 
   door.onCollide("player", () => {
     console.log("🚪 Outside → Home");
-    k.go("home");
+    k.go("home"); // player keeps their outfit
   });
 
-  // Outside improves Earth health slowly
+  // Slowly increase Earth health outside
   k.loop(5, () => {
     const current = store.get(environmentAtom);
     store.set(environmentAtom, Math.min(1, current + 0.01));
-
-    console.log(
-      "🌱 Outside → Earth health:",
-      store.get(environmentAtom).toFixed(2)
-    );
   });
 }
+
