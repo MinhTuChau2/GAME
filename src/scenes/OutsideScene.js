@@ -48,10 +48,6 @@ k.add(player);
     k.go("home"); // player keeps their outfit
   });
 
-  // Slowly increase Earth health outside
-  k.loop(5, () => {
-    const current = store.get(environmentAtom);
-    store.set(environmentAtom, Math.min(1, current + 0.01));
-  });
+  
 }
 

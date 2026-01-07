@@ -12,7 +12,7 @@ export default function startEarthDecay() {
   setInterval(() => {
     const current = store.get(environmentAtom);
 
-    // 🌍 Single source of truth
+    //  Single source of truth
     const outfitId = store.get(outfitAtom) ?? "none";
     const modifier = OUTFIT_DECAY_MODIFIER[outfitId] ?? 1;
 

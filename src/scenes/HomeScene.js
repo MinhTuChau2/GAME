@@ -322,50 +322,61 @@ sections.forEach((s) => {
     { sectionName: s.name },
   ]);
 
+ 
   section.onCollide("player", (player) => {
-    if (player.locked) return;
+  if (player.unlocking) return; //  KEY LINE
 
-    if (s.name === "Bed" || s.name === "Meditate") {
-      // --- LOCK PLAYER ---
-      player.locked = true;
-      player.lockedBy = s.name;
+  if (player.locked && player.lockedBy === s.name) return;
+  if (player.locked && !player.inCloset) return;
 
-      // Save exit position
-      player.exitPos = player.pos.clone();
 
-      // Stop movement & physics
-      player.velocity = k.vec2(0, 0);
-      player.isStatic = true;
-      player.area.collisionIgnore = ["section"];
+    if (
+  (s.name === "Bed" || s.name === "Meditate") &&
+  !player.locked &&
+  !player.unlocking
+) {
+  // --- LOCK PLAYER ---
+  player.locked = true;
+  player.lockedBy = s.name;
+  player.justLocked = true;
+  // Save exit position
+  player.exitPos = player.pos.clone();
 
-      // Snap to center of the object
-      player.pos = section.pos.clone();
+  // Stop movement & physics
+  player.velocity = k.vec2(0, 0);
+  player.isStatic = true;
+  player.area.collisionIgnore = ["section"];
 
-      // --- START COUNTER ---
-      player.lockStartTime = Date.now();
+  // Snap to center of the object
+  player.pos = section.pos.clone();
 
-      // Clear previous timer if any
-      if (player.lockTimer) {
-        clearInterval(player.lockTimer);
-      }
+  // --- START COUNTER ---
+  player.lockStartTime = Date.now();
 
-      player.lockTimer = setInterval(() => {
-        const elapsedSec = (Date.now() - player.lockStartTime) / 1000;
-        const isPenaltyPhase = elapsedSec >= 300; // after 5 minutes
+  if (player.lockTimer) {
+    clearInterval(player.lockTimer);
+  }
 
-        let delta = 0;
-        if (s.name === "Bed") delta = isPenaltyPhase ? -1 : 1;                // +1 every 10s
-        if (s.name === "Meditate") delta = isPenaltyPhase ? -0.5 : 0.5;
+  player.lockTimer = setInterval(() => {
+    const elapsedSec = (Date.now() - player.lockStartTime) / 1000;
+    const isPenaltyPhase = elapsedSec >= 300;
 
-        const current = store.get(mentalAtom);
-        store.set(mentalAtom, current + delta);
+    let delta = 0;
+    if (s.name === "Bed") delta = isPenaltyPhase ? -1 : 1;
+    if (s.name === "Meditate") delta = isPenaltyPhase ? -0.5 : 0.5;
 
-        console.log(
-          `${s.name} ${isPenaltyPhase ? "penalty" : "bonus"} → mental =`,
-          store.get(mentalAtom)
-        );
-      }, 10_000); // every 10 seconds
-    }
+    const current = store.get(mentalAtom);
+    store.set(mentalAtom, current + delta);
+
+    console.log(
+      `${s.name} ${isPenaltyPhase ? "penalty" : "bonus"} → mental =`,
+      store.get(mentalAtom)
+    );
+  }, 10_000);
+}
+
+
+
     else if (s.name === "Closet") {
   openClosetPopup(k, player);
   console.log("Closet opened — choose an outfit");
@@ -393,7 +404,9 @@ if (store.get(environmentAtom) <= 0) {
  // const player = makePlayer(k, k.vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2), 700);
     //return player;
     // --- PLAYER (reuse existing one) ---
-player.pos = k.vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
+ player.pos = k.vec2(WORLD_WIDTH - 200, WORLD_HEIGHT - 200); // near exit door
 k.add(player);
+
+
 
 }

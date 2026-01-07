@@ -14,12 +14,20 @@ export default function makePlayer(k, posVec2, speed) {
     k.pos(posVec2),
     "player",
     {
-      locked: false,
-      lockedBy: null,
-      exitPos: null,
-      direction: k.vec2(0, 0),
-      directionName: "walk-down",
-      currentOutfitId: "none",
+      
+  locked: false,
+  lockedBy: null,
+  unlocking: false,   // 🟢 REQUIRED
+  inCloset: false,    // 🟢 REQUIRED
+  exitPos: null,
+  justLocked: false,
+  direction: k.vec2(0, 0),
+  directionName: "walk-down",
+
+  currentOutfitId: "none",
+
+
+      
     },
   ]);
  
@@ -83,33 +91,48 @@ player.changeOutfit = (outfitId) => {
   // ---------------------
   // CLICK (UNLOCK / CLOSET)
   // ---------------------
-  k.onClick(() => {
-    // Closet mode → change outfit
-    if (player.inCloset) {
-  return; // outfit selection handled by popup UI
-}
+const unlockPlayer = () => {
+  if (player.inCloset) return;
+  if (!player.locked) return;
 
+  // 🛑 Ignore the same click that locked the player
+  if (player.justLocked) {
+    player.justLocked = false;
+    return;
+  }
 
-    if (!player.locked) return;
+  console.log("🔓 Unlocking player");
 
-    if (player.lockTimer) {
-      clearInterval(player.lockTimer);
-      player.lockTimer = null;
-    }
+  if (player.lockTimer) {
+    clearInterval(player.lockTimer);
+    player.lockTimer = null;
+  }
 
-    player.locked = false;
-    player.lockedBy = null;
+  player.locked = false;
+  player.lockedBy = null;
+  player.unlocking = true;
 
-    player.isStatic = false;
+  player.isStatic = false;
+  player.area.collisionIgnore = ["section"];
+
+  if (player.exitPos) {
+    const exitDir = player.exitPos.sub(player.pos).unit();
+    player.pos = player.exitPos.add(exitDir.scale(20));
+  }
+
+  player.exitPos = null;
+
+  setTimeout(() => {
     player.area.collisionIgnore = [];
+    player.unlocking = false;
+  }, 150);
+};
 
-    if (player.exitPos) {
-      const exitDir = player.exitPos.sub(player.pos).unit();
-      player.pos = player.exitPos.add(exitDir.scale(10));
-    }
 
-    player.exitPos = null;
-  });
+game.addEventListener("mouseup", unlockPlayer);
+game.addEventListener("touchend", unlockPlayer);
+
+
 
   // ---------------------
   // CAMERA
@@ -247,7 +270,7 @@ player.changeOutfit = (outfitId) => {
         break;
     }
   };
-// 🔁 Restore outfit on scene load
+//  Restore outfit on scene load
 const savedOutfit = store.get(outfitAtom);
 
 if (savedOutfit && savedOutfit !== "none") {
