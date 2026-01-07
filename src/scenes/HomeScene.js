@@ -105,7 +105,7 @@ export default function HomeScene(k, player) {
   // except makeKaplayCtx()
 
   const WORLD_WIDTH = 1920;
-  const WORLD_HEIGHT = 1080;
+  const WORLD_HEIGHT = 1180;
   
 
 
@@ -301,14 +301,14 @@ export default function HomeScene(k, player) {
 
  // --- SECTIONS AS PNG OBSTACLES WITH INTERACTION ---
 const sections = [
-  { pos: k.vec2(WORLD_WIDTH / 2 - 800, WORLD_HEIGHT / 2 - 380), name: "Bed", sprite: "bed" },
+  { pos: k.vec2(WORLD_WIDTH / 2 - 800, WORLD_HEIGHT / 2 - 430), name: "Bed", sprite: "bed" },
   { pos: k.vec2(WORLD_WIDTH / 2 - 770, WORLD_HEIGHT / 2 + 270), name: "Meditate", sprite: "meditate" },
-  { pos: k.vec2(WORLD_WIDTH / 2 - 100, WORLD_HEIGHT / 2 - 390), name: "Closet", sprite: "closet" },
-  { pos: k.vec2(WORLD_WIDTH / 2 + 700, WORLD_HEIGHT / 2 - 420), name: "Books", sprite: "books" },
-    { pos: k.vec2(WORLD_WIDTH / 2 + 490, WORLD_HEIGHT / 2 - 420), name: "Plant1", sprite: "plant1" },
-    { pos: k.vec2(WORLD_WIDTH / 2 - 600 , WORLD_HEIGHT / 2 - 450), name: "Plant2", sprite: "plant2" },
+  { pos: k.vec2(WORLD_WIDTH / 2 - 100, WORLD_HEIGHT / 2 - 450), name: "Closet", sprite: "closet" },
+  { pos: k.vec2(WORLD_WIDTH / 2 + 700, WORLD_HEIGHT / 2 - 450), name: "Books", sprite: "books" },
+    { pos: k.vec2(WORLD_WIDTH / 2 + 490, WORLD_HEIGHT / 2 - 480), name: "Plant1", sprite: "plant1" },
+    { pos: k.vec2(WORLD_WIDTH / 2 - 600 , WORLD_HEIGHT / 2 - 520), name: "Plant2", sprite: "plant2" },
     { pos: k.vec2(WORLD_WIDTH / 2 - 850, WORLD_HEIGHT / 2 - 60), name: "Plant3", sprite: "plant3" },
-     { pos: k.vec2(WORLD_WIDTH / 2 + 960, WORLD_HEIGHT / 2 + 420), name: "ExitDoor", sprite: "door" },
+     { pos: k.vec2(WORLD_WIDTH / 2 + 960, WORLD_HEIGHT / 2 + 460), name: "ExitDoor", sprite: "door" },
 ];
 
 sections.forEach((s) => {
@@ -358,23 +358,31 @@ sections.forEach((s) => {
   }
 
   player.lockTimer = setInterval(() => {
-    const elapsedSec = (Date.now() - player.lockStartTime) / 1000;
-    const isPenaltyPhase = elapsedSec >= 300;
+  const elapsedSec = (Date.now() - player.lockStartTime) / 1000;
+  const isPenaltyPhase = elapsedSec >= 300;
 
-    let delta = 0;
-    if (s.name === "Bed") delta = isPenaltyPhase ? -1 : 1;
-    if (s.name === "Meditate") delta = isPenaltyPhase ? -0.5 : 0.5;
+  let delta = 0;
+  if (s.name === "Bed") delta = isPenaltyPhase ? -0.1 : 0.1;
+  if (s.name === "Meditate") delta = isPenaltyPhase ? -0.05 : 0.05;
 
-    const current = store.get(mentalAtom);
-    store.set(mentalAtom, current + delta);
+  const current = store.get(mentalAtom);
 
-    console.log(
-      `${s.name} ${isPenaltyPhase ? "penalty" : "bonus"} → mental =`,
-      store.get(mentalAtom)
-    );
-  }, 10_000);
+  // 🚫 If already maxed, ignore bonus
+  if (current >= 1 && delta > 0) {
+    delta = 0;
+  }
+
+  // ✅ Clamp result between 0 and 1
+  const next = Math.min(1, Math.max(0, current + delta));
+
+  store.set(mentalAtom, next);
+
+  console.log(
+    `${s.name} ${isPenaltyPhase ? "penalty" : "bonus"} → mental =`,
+    next.toFixed(2)
+  );
+}, 10_000);
 }
-
 
 
     else if (s.name === "Closet") {
@@ -399,6 +407,42 @@ if (store.get(environmentAtom) <= 0) {
   console.log("💀 Earth collapsed");
   // k.go("gameover") later
 }
+
+
+player.onUpdate(() => {
+  player.pos.x = k.clamp(player.pos.x, 0, 1920);
+  player.pos.y = k.clamp(player.pos.y, 0, 1080);
+});
+const BORDER_THICKNESS = 4;
+const BORDER_COLOR = k.rgb(255, 50, 50); // red debug
+
+// Top
+k.add([
+  k.rect(WORLD_WIDTH, BORDER_THICKNESS),
+  k.pos(0, 0),
+  k.color(BORDER_COLOR),
+]);
+
+// Bottom
+k.add([
+  k.rect(WORLD_WIDTH, BORDER_THICKNESS),
+  k.pos(0, WORLD_HEIGHT - BORDER_THICKNESS),
+  k.color(BORDER_COLOR),
+]);
+
+// Left
+k.add([
+  k.rect(BORDER_THICKNESS, WORLD_HEIGHT),
+  k.pos(0, 0),
+  k.color(BORDER_COLOR),
+]);
+
+// Right
+k.add([
+  k.rect(BORDER_THICKNESS, WORLD_HEIGHT),
+  k.pos(WORLD_WIDTH - BORDER_THICKNESS, 0),
+  k.color(BORDER_COLOR),
+]);
 
   // --- PLAYER ---
  // const player = makePlayer(k, k.vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2), 700);

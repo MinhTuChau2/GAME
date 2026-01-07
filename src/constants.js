@@ -15,8 +15,9 @@ color3: "#1E1E1E", // earth (near-black)
 export const DIAGONAL_FACTOR = 1 / Math.sqrt(2);
 export const ZOOM_MAX_BOUND = 2;
 export const ZOOM_MIN_BOUND = 0.2;
-export const WORLD_WIDTH = 2000;  // width of your world
-export const WORLD_HEIGHT = 2000; // height of your world
+//export const WORLD_WIDTH = 2000;  // width of your world
+//export const WORLD_HEIGHT = 2000; // height of your world
+export const BASE_MENTAL_DECAY = 0.0008;
 
 export const OUTFIT_DECAY_MODIFIER = {
   outfit1: 0.4, // Handmade clothes (best)

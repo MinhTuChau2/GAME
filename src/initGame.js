@@ -7,6 +7,8 @@ import HomeScene from "./scenes/HomeScene";
 import OutsideScene from "./scenes/OutsideScene";
 import makeEarthHealthBar from "./ui/EarthHealthBar";
 import startEarthDecay from "./systems/earthDecay";
+import makeMentalHealthBar from "./ui/MentalHealthBar";
+import startMentalDecay from "./systems/mentalDecay";
 
 let currentPlayer = null;
 
@@ -17,9 +19,15 @@ export default async function initGame() {
  currentPlayer = player;
   //  Start decay ONCE
   startEarthDecay(() => currentPlayer);
+  startMentalDecay();
+// UI listens to mentalAtom
+  makeMentalHealthBar(k);
+  console.log("Mental:", store.get(mentalAtom));
+console.log("Mental bar spawned");
 
   // UI listens to environmentAtom
   makeEarthHealthBar(k);
+
 
 k.scene("home", () => {
   currentPlayer = HomeScene(k, player);
@@ -28,7 +36,6 @@ k.scene("home", () => {
 k.scene("outside", () => {
   currentPlayer = OutsideScene(k, player);
 });
-
 
   k.go("home");
 }
