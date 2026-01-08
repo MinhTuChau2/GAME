@@ -1,5 +1,5 @@
 import { store, mentalAtom } from "../store";
-
+//todo: mental health effect when low mental health, gameover
 export default function makeMentalHealthBar(k) {
   const BAR_WIDTH = 220;
   const BAR_HEIGHT = 18;

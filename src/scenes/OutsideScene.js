@@ -1,9 +1,12 @@
 import makeCar from "../entities/Car";
-import { store, outfitAtom, environmentAtom, carDecayAtom   } from "../store";
+import { store, outfitAtom, environmentAtom, carDecayAtom , moneyAtom  } from "../store";
 
 const COIN_SCALE = 0.1;
 const WORLD_WIDTH = 1920;
 const WORLD_HEIGHT = 1080;
+// Track active coin respawn timers
+const coinRespawnTimers = new Set();
+let leavingScene = false;
 
 export default function OutsideScene(k, player) {
   if (!player) return;
@@ -69,6 +72,22 @@ export default function OutsideScene(k, player) {
   ]);
 
   // ---------------------
+// Coin UI
+// ---------------------
+const coinText = k.add([
+  k.text(`Coins: ${store.get(moneyAtom)}`, { size: 18 }),
+  k.pos(50, 50),
+  k.fixed(),
+  k.z(200),
+  k.stay(),
+]);
+
+// React to money changes
+coinText.onUpdate(() => {
+  coinText.text = `Coins: ${store.get(moneyAtom)}`;
+});
+
+  // ---------------------
   // Player
   // ---------------------
   player.pos = k.vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
@@ -122,15 +141,18 @@ export default function OutsideScene(k, player) {
   // Coins
   // ---------------------
   function spawnCoin(pos) {
-    k.add([
-      k.sprite("coin"),
-      k.pos(pos),
-      k.scale(COIN_SCALE),
-      k.anchor("center"),
-      k.area({ shape: new k.Rect(k.vec2(0), 10, 10) }),
-      "coin",
-    ]);
-  }
+  return k.add([
+    k.sprite("coin"),
+    k.pos(pos),
+    k.scale(COIN_SCALE),
+    k.anchor("center"),
+    k.area({ shape: new k.Rect(k.vec2(0), 10, 10) }),
+    k.opacity(1),
+    "coin",
+  ]);
+}
+
+
 
   for (let i = 0; i < 40; i++) {
     spawnCoin(
@@ -141,10 +163,47 @@ export default function OutsideScene(k, player) {
     );
   }
 
-  k.onCollide("car", "coin", (car, coin) => {
-    if (!car.driver) return;
-    coin.destroy();
-  });
+  
+const COIN_RESPAWN_TIME = 5000;
+const RESPAWN_RADIUS = 40;
+
+k.onCollide("car", "coin", (car, coin) => {
+  if (!car.driver) return;
+  if (leavingScene) return;
+
+  const basePos = coin.pos.clone();
+  coin.destroy();
+
+  store.set(moneyAtom, store.get(moneyAtom) + 1);
+
+  const timerId = setTimeout(() => {
+    // 🛑 Do nothing if we already left
+    if (leavingScene) return;
+
+    const offset = k.vec2(
+      k.rand(-RESPAWN_RADIUS, RESPAWN_RADIUS),
+      k.rand(-RESPAWN_RADIUS, RESPAWN_RADIUS)
+    );
+
+    const newCoin = spawnCoin(basePos.add(offset));
+    newCoin.opacity = 0;
+
+    k.tween(
+      0,
+      1,
+      0.6,
+      (v) => (newCoin.opacity = v),
+      k.easings.easeOutQuad
+    );
+
+    coinRespawnTimers.delete(timerId);
+  }, COIN_RESPAWN_TIME);
+
+  coinRespawnTimers.add(timerId);
+});
+
+
+
 
 // ---------------------
 // Door to go home
@@ -166,21 +225,29 @@ const homeDoor = addHomeDoor(k.vec2(100, WORLD_HEIGHT / 2));
 // ---------------------
 // Door collision / interaction
 // ---------------------
-k.onCollide("player", "door", (playerEntity, door) => {
-  // If player is in a car, exit first
-  if (playerEntity.isInCar) {
+k.onCollide("player", "door", (playerEntity) => {
+  // 🛑 STOP ALL COIN RESPAWNS
+  leavingScene = true;
+
+  coinRespawnTimers.forEach((id) => clearTimeout(id));
+  coinRespawnTimers.clear();
+
+  // 🚗 Force exit car
+  if (playerEntity.inCar && playerEntity.car) {
     const car = playerEntity.car;
     car.driver = null;
-    playerEntity.isInCar = false;
-    playerEntity.hidden = false;
+    playerEntity.pos = car.pos.add(k.vec2(32, 0));
+    playerEntity.inCar = false;
     playerEntity.car = null;
-    store.set(carDecayAtom, 1); // optional: reset earth decay
+    playerEntity.hidden = false;
+    store.set(carDecayAtom, 1);
   }
-  player.scale = k.vec2(5); // reset player scale
-  // Go back home scene
+
+  playerEntity.scale = k.vec2(5);
+
+  // 🚪 Go home
   k.go("home");
 });
-
 
   // ---------------------
   // Camera
