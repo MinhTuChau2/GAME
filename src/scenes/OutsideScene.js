@@ -1,5 +1,6 @@
 import makeCar from "../entities/Car";
 import { store, outfitAtom, environmentAtom, carDecayAtom , moneyAtom  } from "../store";
+import { PALETTE } from "../constants";
 
 const COIN_SCALE = 0.1;
 const WORLD_WIDTH = 1920;
@@ -10,7 +11,7 @@ let leavingScene = false;
 
 export default function OutsideScene(k, player) {
   if (!player) return;
-
+  leavingScene = false;
   // ---------------------
   // Load sprites (ONLY ONCE)
   // ---------------------
@@ -62,14 +63,86 @@ export default function OutsideScene(k, player) {
 
   k.loadSprite("coin", "./sprites/Coin.png");
 
-  // ---------------------
+    // ---------------------
   // Background
   // ---------------------
-  k.add([
-    k.rect(WORLD_WIDTH, WORLD_HEIGHT),
-    k.pos(0, 0),
-    k.color(70, 150, 70),
-  ]);
+const BG_WIDTH = 1920;
+const BG_HEIGHT = 1080;
+
+const OUTSIDE_WIDTH = 1920;
+const OUTSIDE_HEIGHT = 1080;
+
+
+k.loadSprite("outsideBg", "./sprites/OUTSIDE.png", {
+  sliceX: 2,
+  sliceY: 1,
+  anims: {
+    idle: {
+      from: 0,
+      to: 1,
+      loop: true,
+      speed: 1, // slow idle
+    },
+  },
+});
+
+const outside = k.add([
+  k.sprite("outsideBg", { anim: "idle" }),
+  k.pos(WORLD_WIDTH / 2, WORLD_HEIGHT / 2),
+  k.anchor("center"),
+  k.z(-5), // ABOVE forest, BELOW player
+]);
+
+
+
+k.loadSprite("FOREST", "./sprites/FOREST.png", {
+  sliceX: 2,
+  sliceY: 1,
+  anims: {
+    idle: {
+      from: 0,
+      to: 1,
+      loop: true,
+      speed: 1, // slow idle
+    },
+  },
+});
+
+const bgTiles = [];
+
+// Create a 3x3 forest grid
+for (let x = -1; x <= 1; x++) {
+  for (let y = -1; y <= 1; y++) {
+    bgTiles.push(
+      k.add([
+        k.sprite("FOREST", { anim: "idle" }),
+        k.pos(x * BG_WIDTH, y * BG_HEIGHT),
+        k.anchor("topleft"),
+        k.z(-20), // FAR BACK
+      ])
+    );
+  }
+}
+
+// Reposition forest tiles around camera
+k.onUpdate(() => {
+  const cam = k.camPos();
+
+  const baseX = Math.floor(cam.x / BG_WIDTH) * BG_WIDTH;
+  const baseY = Math.floor(cam.y / BG_HEIGHT) * BG_HEIGHT;
+
+  let i = 0;
+  for (let x = -1; x <= 1; x++) {
+    for (let y = -1; y <= 1; y++) {
+      bgTiles[i].pos = k.vec2(
+        baseX + x * BG_WIDTH,
+        baseY + y * BG_HEIGHT
+      );
+      i++;
+    }
+  }
+});
+
 
   // ---------------------
 // Coin UI
@@ -90,7 +163,7 @@ coinText.onUpdate(() => {
   // ---------------------
   // Player
   // ---------------------
-  player.pos = k.vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
+  player.pos = k.vec2(WORLD_WIDTH / 2 - 800, WORLD_HEIGHT / 2 - 120);
   player.scale = k.vec2(2);
   k.add(player);
 
@@ -101,13 +174,13 @@ coinText.onUpdate(() => {
   // ---------------------
   const civic = makeCar(
     k,
-    k.vec2(WORLD_WIDTH / 2 - 200, WORLD_HEIGHT / 2),
+    k.vec2(WORLD_WIDTH / 2 , WORLD_HEIGHT / 2),
     "civic"
   );
 
   const prologue = makeCar(
     k,
-    k.vec2(WORLD_WIDTH / 2 + 200, WORLD_HEIGHT / 2),
+    k.vec2(WORLD_WIDTH / 2 + 350, WORLD_HEIGHT / 2),
     "prologue"
   );
 
@@ -177,7 +250,7 @@ k.onCollide("car", "coin", (car, coin) => {
   store.set(moneyAtom, store.get(moneyAtom) + 1);
 
   const timerId = setTimeout(() => {
-    // 🛑 Do nothing if we already left
+    //  Do nothing if we already left
     if (leavingScene) return;
 
     const offset = k.vec2(
@@ -210,43 +283,51 @@ k.onCollide("car", "coin", (car, coin) => {
 // ---------------------
 function addHomeDoor(pos) {
   return k.add([
-    k.rect(40, 60), // size of the door
+    k.rect(50, 50), // size of the door
     k.pos(pos),
     k.color(150, 75, 0), // brown
     k.anchor("center"),
     k.area({ shape: new k.Rect(k.vec2(0), 40, 60) }),
+    k.opacity(0.1),
     "door",
   ]);
 }
 
 // Add the door somewhere in the world
-const homeDoor = addHomeDoor(k.vec2(100, WORLD_HEIGHT / 2));
+const homeDoor = addHomeDoor(k.vec2(107, WORLD_HEIGHT / 2 - 100));
 
 // ---------------------
 // Door collision / interaction
 // ---------------------
 k.onCollide("player", "door", (playerEntity) => {
-  // 🛑 STOP ALL COIN RESPAWNS
+  // Stop coin respawns
   leavingScene = true;
-
   coinRespawnTimers.forEach((id) => clearTimeout(id));
   coinRespawnTimers.clear();
 
-  // 🚗 Force exit car
+  // Force exit car
   if (playerEntity.inCar && playerEntity.car) {
     const car = playerEntity.car;
     car.driver = null;
-    playerEntity.pos = car.pos.add(k.vec2(32, 0));
     playerEntity.inCar = false;
     playerEntity.car = null;
     playerEntity.hidden = false;
     store.set(carDecayAtom, 1);
   }
 
+  // Reset scale
   playerEntity.scale = k.vec2(5);
 
-  // 🚪 Go home
+  // ✅ Reset collision and interaction flags
+  playerEntity.locked = false;
+  playerEntity.inCloset = false;
+  playerEntity.unlocking = false;
+  playerEntity.area.collisionIgnore = []; // important
+  playerEntity.hidden = false;
+
+  // Go home
   k.go("home");
+  console.log("🚪 Going home → outside");
 });
 
   // ---------------------

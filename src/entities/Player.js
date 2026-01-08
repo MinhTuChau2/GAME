@@ -54,7 +54,7 @@ export default function makePlayer(k, posVec2, speed) {
     }
 
     if (id === "none") return;
-
+   if (player.inCar) player.hidden = false;
     player.outfit = player.add([
       k.sprite(id, { anim: `${player.directionName}-idle` }),
       k.anchor("center"),

@@ -15,7 +15,7 @@ function openClosetPopup(k, player) {
     k.color(0, 0, 0),
     k.opacity(0.6),
     k.fixed(),
-    k.area(),
+    //k.area(),
     "closetPopup",
   ]);
 
@@ -40,63 +40,108 @@ function openClosetPopup(k, player) {
   ]);
 
   const outfitOptions = [
-    { id: "outfit1", label: "Handmade clothes", desc: "Ethical, slow fashion" },
-    { id: "outfit2", label: "Second-hand clothes", desc: "Sustainable & affordable" },
-    { id: "outfit3", label: "Local brands", desc: "Supports local creators" },
-    { id: "outfit4", label: "Fast fashion", desc: "Cheap, low sustainability" },
-    { id: "outfit5", label: "Vintage", desc: "Unique & reused" },
-    { id: "none", label: "No outfit", desc: "Default look" },
-  ];
+  { id: "outfit1", label: "Handmade clothes", desc: "Ethical, slow fashion", price: 50 },
+  { id: "outfit2", label: "Second-hand clothes", desc: "Sustainable & affordable", price: 25 },
+  { id: "outfit3", label: "Local brands", desc: "Supports local creators", price: 40 },
+  { id: "outfit4", label: "Fast fashion", desc: "Cheap, low sustainability", price: 10 },
+  { id: "outfit5", label: "Vintage", desc: "Unique & reused", price: 30 },
+  { id: "none", label: "No outfit", desc: "Default look", price: 0 },
+];
+
+// Simple ownership store (can later move to atom / save file)
+const ownedOutfits = new Set(["none"]);
+
 
   outfitOptions.forEach((o, i) => {
-    const y = k.center().y - 120 + i * 60;
+  const y = k.center().y - 120 + i * 60;
+  const isOwned = ownedOutfits.has(o.id);
+  const money = store.get(moneyAtom);
+  const canAfford = money >= o.price;
 
-    const button = k.add([
-      k.rect(520, 46, { radius: 6 }),
-      k.pos(k.center().x, y),
-      k.anchor("center"),
-      k.color(60, 60, 60),
-      k.area(),
-      k.fixed(),
-      {
-        outfitId: o.id,
-        baseColor: k.Color.fromArray([60, 60, 60]),
-        hoverColor: k.Color.fromArray([100, 100, 100]),
-      },
-      "closetPopup",
-    ]);
+  const button = k.add([
+    k.rect(520, 46, { radius: 6 }),
+    k.pos(k.center().x, y),
+    k.anchor("center"),
+    k.color(
+      isOwned ? k.rgb(60, 100, 60)
+      : canAfford ? k.rgb(60, 60, 60)
+      : k.rgb(80, 40, 40)
+    ),
+    k.area(),
+    k.fixed(),
+    {
+      outfitId: o.id,
+      price: o.price,
+      owned: isOwned,
+    },
+    "closetPopup",
+  ]);
 
-    k.add([
-      k.text(`${o.label} — ${o.desc}`, { size: 16 }),
-      k.pos(k.center().x, y),
-      k.anchor("center"),
-      k.fixed(),
-      "closetPopup",
-    ]);
+  const label = isOwned
+    ? "Wear"
+    : o.price === 0
+      ? "Free"
+      : canAfford
+        ? `Buy (${o.price} coins)`
+        : `Locked (${o.price} coins)`;
 
-    // --- HOVER ANIMATION ---
-    button.onHover(() => {
-      button.color = button.hoverColor;
-      button.scale = k.vec2(1.03);
-    });
+  k.add([
+    k.text(`${o.label} — ${o.desc} | ${label}`, { size: 16 }),
+    k.pos(k.center().x, y),
+    k.anchor("center"),
+    k.fixed(),
+    "closetPopup",
+  ]);
 
-    button.onHoverEnd(() => {
-      button.color = button.baseColor;
-      button.scale = k.vec2(1);
-    });
 
-    // --- CLICK ---
-    button.onClick(() => {
-      player.changeOutfit(o.id);
-      closeCloset();
-    });
-  });
+// Hover
+button.onHover(() => {
+  button.scale = k.vec2(1.03);
+});
+
+button.onHoverEnd(() => {
+  button.scale = k.vec2(1);
+});
+
+// Click logic (ONLY ONE)
+button.onClick(() => {
+  if (o.id === "none") {
+    player.changeOutfit("none");
+    closeCloset();
+    return;
+  }
+
+  if (ownedOutfits.has(o.id)) {
+    player.changeOutfit(o.id);
+    closeCloset();
+    return;
+  }
+
+  if (!canAfford) {
+    k.shake(6);
+    return;
+  }
+
+  // BUY
+  store.set(moneyAtom, money - o.price);
+  ownedOutfits.add(o.id);
+  player.changeOutfit(o.id);
+  player.unlocking = false;
+  closeCloset();
+});
+});
 
   function closeCloset() {
-    k.destroyAll("closetPopup");
-    player.locked = false;
-    player.inCloset = false;
-  }
+  k.destroyAll("closetPopup");
+  player.locked = false;
+  player.inCloset = false;
+  
+  // Only ignore sections
+  player.area.collisionIgnore = player.area.collisionIgnore?.filter(tag => tag !== "section") || [];
+  
+  player.unlocking = false; // make sure unlocking flag is cleared
+}
+
 }
 
 
@@ -108,6 +153,18 @@ export default function HomeScene(k, player) {
   const WORLD_HEIGHT = 1180;
   
 
+function resetPlayerState(player) {
+  player.locked = false;
+  player.inCloset = false;
+  player.hidden = false;
+  player.inCar = false;
+  player.car = null;
+  player.unlocking = false;
+  player.area.collisionIgnore = [];
+  player.isStatic = false;
+  player.velocity = k.vec2(0,0);
+  player.scale = k.vec2(2); // normal scale
+}
 
   // --- LOAD PLAYER SPRITE ---
   
@@ -391,8 +448,10 @@ sections.forEach((s) => {
 }
 else if (s.name === "ExitDoor") {
   console.log("🚪 Leaving home → outside");
+  resetPlayerState(player); // <-- RESET EVERYTHING
   k.go("outside");
 }
+
 
 
     else {
@@ -413,8 +472,9 @@ player.onUpdate(() => {
   player.pos.x = k.clamp(player.pos.x, 0, 1920);
   player.pos.y = k.clamp(player.pos.y, 0, 1080);
 });
-const BORDER_THICKNESS = 4;
-const BORDER_COLOR = k.rgb(255, 50, 50); // red debug
+const BORDER_THICKNESS = 5;
+const BORDER_COLOR = k.rgb(0, 0, 0);
+ 
 
 // Top
 k.add([
